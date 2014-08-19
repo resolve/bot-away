@@ -4,11 +4,12 @@ class ActionView::Helpers::InstanceTag
 
   def initialize_with_spinner(object_name, method_name, template_object, object = nil)
     initialize_without_spinner(object_name, method_name, template_object, object)
-    
+
     if template_object.controller.send(:protect_against_forgery?) &&
                !BotAway.excluded?(:object_name => object_name, :method_name => method_name) &&
                !BotAway.excluded?(:controller => template_object.controller.controller_name,
-                                  :action => template_object.controller.action_name)
+                                  :action => template_object.controller.action_name,
+                                  :path => template_object.controller.env['PATH_INFO'])
       @spinner = BotAway::Spinner.new(template_object.request.ip, object_name, template_object.form_authenticity_token)
     end
   end
@@ -34,7 +35,7 @@ class ActionView::Helpers::InstanceTag
     yield if object
     object
   end
-  
+
   def honeypot_tag(name, options = nil, *args)
     disguise tag_without_honeypot(name, honeypot_options(options ? options.dup : {}), *args)
   end
@@ -96,7 +97,7 @@ class ActionView::Helpers::InstanceTag
   alias_method_chain :tag, :honeypot
   alias_method_chain :to_label_tag, :obfuscation
   alias_method_chain :content_tag, :obfuscation
-  
+
   def disguise(element)
     return element.replace("Honeypot(#{element})") if BotAway.show_honeypots
     # TODO a way to customize the hidden tags too
@@ -109,7 +110,7 @@ class ActionView::Helpers::InstanceTag
         element.replace "<div style='position:absolute;width:0px;height:1px;z-index:-1;color:transparent;overflow:hidden;'>#{honeypot_warning_tag}#{element}</div>"
     end
   end
-  
+
   def honeypot_index
     @honeypot_index || rand(I18n.t("bot_away.number_of_honeypot_warning_messages").to_i) + 1
   end
@@ -122,7 +123,7 @@ class ActionView::Helpers::InstanceTag
       warning.html_safe
     end
   end
-  
+
   def honeypot_warning_tag
     if BotAway.obfuscate_honeypot_warning_messages?
       "<bdo dir=\"rtl\">#{honeypot_warning_message}</bdo>".html_safe
